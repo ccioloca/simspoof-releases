@@ -1,0 +1,980 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SimSpoof — Fake your phone's GPS to test location apps</title>
+    <meta
+      name="description"
+      content="SimSpoof plays a GPX route as real movement on an iPhone Simulator, Android emulator, or a real iPhone — so you can test location apps from your desk."
+    />
+    <style>
+      :root {
+        --bg: #f6f8fb;
+        --panel: #ffffff;
+        --panel-2: #f0f3f8;
+        --text: #1b2430;
+        --dim: #5a6572;
+        --line: #e3e8ef;
+        --line-strong: #cfd6e0;
+        --accent: #2f6bff;
+        --accent-ink: #1f4fd1;
+        --accent-soft: rgba(47, 107, 255, 0.1);
+        --go: #17a34a;
+        --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+        --radius: 14px;
+        --radius-sm: 9px;
+        --shadow:
+          0 1px 2px rgba(16, 24, 40, 0.05), 0 8px 24px rgba(16, 24, 40, 0.06);
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        color-scheme: light;
+        scroll-behavior: smooth;
+        scroll-padding-top: 80px;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font:
+          15px/1.65 -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          Roboto,
+          Helvetica,
+          Arial,
+          sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+      a:hover {
+        text-decoration: underline;
+      }
+      code,
+      kbd {
+        font-family: var(--mono);
+        font-size: 0.86em;
+      }
+      code {
+        background: var(--panel-2);
+        border: 1px solid var(--line);
+        border-radius: 5px;
+        padding: 1px 5px;
+      }
+      kbd {
+        background: var(--panel-2);
+        border: 1px solid var(--line-strong);
+        border-bottom-width: 2px;
+        border-radius: 5px;
+        padding: 1px 6px;
+      }
+      .wrap {
+        max-width: 940px;
+        margin: 0 auto;
+        padding: 0 22px;
+      }
+      header.nav {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        background: color-mix(in srgb, var(--bg) 88%, transparent);
+        backdrop-filter: saturate(1.4) blur(10px);
+        border-bottom: 1px solid var(--line);
+      }
+      .nav-in {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        height: 58px;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        color: var(--text);
+      }
+      .brand .dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: var(--accent);
+        box-shadow: 0 0 0 4px var(--accent-soft);
+      }
+      .nav-links {
+        display: flex;
+        gap: 18px;
+        margin-left: auto;
+        font-size: 14px;
+      }
+      .nav-links a {
+        color: var(--dim);
+      }
+      .nav-links a:hover {
+        color: var(--text);
+        text-decoration: none;
+      }
+      @media (max-width: 720px) {
+        .nav-links {
+          display: none;
+        }
+      }
+      .hero {
+        padding: 72px 0 48px;
+        border-bottom: 1px solid var(--line);
+      }
+      .hero .pill {
+        display: inline-block;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--accent-ink);
+        background: var(--accent-soft);
+        border: 1px solid var(--accent-soft);
+        border-radius: 999px;
+        padding: 4px 12px;
+        margin-bottom: 20px;
+      }
+      .hero h1 {
+        font-size: clamp(32px, 6vw, 52px);
+        line-height: 1.05;
+        letter-spacing: -0.03em;
+        margin: 0 0 16px;
+      }
+      .hero h1 .grad {
+        color: var(--accent);
+      }
+      .hero p.lead {
+        font-size: clamp(16px, 2.5vw, 20px);
+        color: var(--dim);
+        max-width: 640px;
+        margin: 0 0 28px;
+      }
+      .cta {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 600;
+        font-size: 15px;
+        padding: 11px 20px;
+        border-radius: var(--radius-sm);
+        border: 1px solid transparent;
+        cursor: pointer;
+      }
+      .btn.primary {
+        background: var(--accent);
+        color: #fff;
+      }
+      .btn.primary:hover {
+        background: var(--accent-ink);
+        text-decoration: none;
+      }
+      .btn.ghost {
+        background: var(--panel);
+        color: var(--text);
+        border-color: var(--line-strong);
+      }
+      .btn.ghost:hover {
+        border-color: var(--accent);
+        text-decoration: none;
+      }
+      section {
+        padding: 56px 0;
+        border-bottom: 1px solid var(--line);
+      }
+      section h2 {
+        font-size: 27px;
+        letter-spacing: -0.02em;
+        margin: 0 0 8px;
+      }
+      section .sub {
+        color: var(--dim);
+        margin: 0 0 30px;
+        max-width: 640px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 16px;
+      }
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        padding: 20px;
+        box-shadow: var(--shadow);
+      }
+      .card .ic {
+        width: 38px;
+        height: 38px;
+        display: grid;
+        place-items: center;
+        border-radius: 10px;
+        background: var(--accent-soft);
+        color: var(--accent);
+        margin-bottom: 14px;
+      }
+      .card h3 {
+        font-size: 16px;
+        margin: 0 0 6px;
+      }
+      .card p {
+        margin: 0;
+        color: var(--dim);
+        font-size: 14px;
+      }
+      ol.steps {
+        list-style: none;
+        counter-reset: s;
+        padding: 0;
+        margin: 0;
+        display: grid;
+        gap: 14px;
+      }
+      ol.steps li {
+        counter-increment: s;
+        position: relative;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        padding: 18px 20px 18px 62px;
+        box-shadow: var(--shadow);
+      }
+      ol.steps li::before {
+        content: counter(s);
+        position: absolute;
+        left: 18px;
+        top: 18px;
+        width: 28px;
+        height: 28px;
+        display: grid;
+        place-items: center;
+        border-radius: 8px;
+        background: var(--accent);
+        color: #fff;
+        font-weight: 700;
+        font-size: 14px;
+      }
+      ol.steps li h3 {
+        margin: 0 0 4px;
+        font-size: 16px;
+      }
+      ol.steps li p {
+        margin: 0;
+        color: var(--dim);
+        font-size: 14px;
+      }
+      .split {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+      @media (max-width: 720px) {
+        .split {
+          grid-template-columns: 1fr;
+        }
+      }
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        padding: 22px;
+        box-shadow: var(--shadow);
+      }
+      .panel h3 {
+        margin: 0 0 10px;
+        font-size: 17px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .panel ul {
+        margin: 0;
+        padding-left: 18px;
+        color: var(--dim);
+        font-size: 14px;
+      }
+      .panel ul li {
+        margin: 5px 0;
+      }
+      .panel ul li b {
+        color: var(--text);
+        font-weight: 600;
+      }
+      pre {
+        background: #0d1117;
+        color: #e6edf3;
+        border-radius: var(--radius-sm);
+        padding: 16px 18px;
+        overflow-x: auto;
+        font-family: var(--mono);
+        font-size: 13px;
+        line-height: 1.6;
+        border: 1px solid #1f2630;
+      }
+      pre .c {
+        color: #7d8896;
+      }
+      pre .g {
+        color: #7ee787;
+      }
+      .note {
+        background: var(--accent-soft);
+        border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+        border-radius: var(--radius);
+        padding: 18px 20px;
+        color: var(--text);
+        font-size: 14px;
+      }
+      .note b {
+        color: var(--accent-ink);
+      }
+      table.req {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+      }
+      table.req td {
+        padding: 12px 14px;
+        border-top: 1px solid var(--line);
+        vertical-align: top;
+      }
+      table.req tr:first-child td {
+        border-top: none;
+      }
+      table.req td:first-child {
+        font-weight: 600;
+        white-space: nowrap;
+        width: 190px;
+      }
+      table.req td:last-child {
+        color: var(--dim);
+      }
+      footer {
+        padding: 40px 0 60px;
+        color: var(--dim);
+        font-size: 13px;
+        text-align: center;
+      }
+      .tabs {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin-bottom: 16px;
+      }
+      .tabchip {
+        font-size: 12px;
+        font-weight: 600;
+        padding: 5px 12px;
+        border-radius: 999px;
+        background: var(--panel-2);
+        border: 1px solid var(--line);
+        color: var(--dim);
+      }
+      .shots {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 18px;
+        margin-top: 26px;
+      }
+      .shot {
+        margin: 0;
+      }
+      .shot img {
+        display: block;
+        width: 100%;
+        aspect-ratio: 3 / 2;
+        object-fit: cover;
+        object-position: top;
+        border: 1px solid var(--line-strong);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        background: var(--panel-2);
+      }
+      .shot figcaption {
+        margin-top: 10px;
+        color: var(--dim);
+        font-size: 13px;
+        line-height: 1.5;
+      }
+      .mock {
+        margin: 4px 0 30px;
+        border: 1px solid var(--line-strong);
+        border-radius: var(--radius);
+        overflow: hidden;
+        box-shadow: var(--shadow);
+        background: var(--panel);
+      }
+      .mock-bar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 9px 12px;
+        border-bottom: 1px solid var(--line);
+        background: var(--panel-2);
+        font-size: 12px;
+        flex-wrap: wrap;
+      }
+      .mock-btn {
+        font-weight: 600;
+        padding: 4px 10px;
+        border-radius: 7px;
+        background: var(--accent);
+        color: #fff;
+      }
+      .mock-btn.ghost {
+        background: var(--panel);
+        color: var(--dim);
+        border: 1px solid var(--line-strong);
+      }
+      .mock-sep {
+        width: 1px;
+        height: 16px;
+        background: var(--line-strong);
+      }
+      .mock-tab {
+        color: var(--dim);
+        padding: 4px 8px;
+      }
+      .mock-tab.on {
+        color: var(--accent);
+        font-weight: 600;
+        border-bottom: 2px solid var(--accent);
+      }
+      .mock-filter {
+        margin-left: auto;
+        color: var(--dim);
+        font-family: var(--mono);
+        font-size: 11px;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        padding: 4px 10px;
+        background: var(--panel);
+      }
+      .mock-log {
+        font-family: var(--mono);
+        font-size: 12.5px;
+        line-height: 1.9;
+        padding: 8px 4px;
+      }
+      .ml {
+        display: flex;
+        gap: 12px;
+        padding: 0 12px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .ml:hover {
+        background: var(--panel-2);
+      }
+      .ml .t {
+        color: var(--dim);
+        opacity: 0.7;
+      }
+      .ml .src {
+        color: #7c3aed;
+        width: 42px;
+        flex: none;
+      }
+      .ml .lv.i {
+        color: var(--text);
+      }
+      .ml .lv.d {
+        color: var(--dim);
+      }
+      .ml .lv.w {
+        color: #b45309;
+      }
+      .ml .lv.e {
+        color: #dc2626;
+      }
+      .mock-cap {
+        display: block;
+        padding: 8px 12px;
+        border-top: 1px solid var(--line);
+        color: var(--dim);
+        font-size: 11px;
+        background: var(--panel-2);
+      }
+    </style>
+  </head>
+  <body>
+    <header class="nav">
+      <div class="wrap nav-in">
+        <a class="brand" href="#top"><span class="dot"></span>SimSpoof</a>
+        <nav class="nav-links">
+          <a href="#features">Features</a>
+          <a href="#start">Get started</a>
+          <a href="#use">How to use</a>
+          <a href="#inspect">Logs &amp; Network</a>
+          <a href="#perf">Performance</a>
+        </nav>
+      </div>
+    </header>
+
+    <a id="top"></a>
+    <div class="hero">
+      <div class="wrap">
+        <span class="pill">GPS simulation for location apps</span>
+        <h1>
+          Fake your phone's GPS to<br />test location apps
+          <span class="grad">from your desk.</span>
+        </h1>
+        <p class="lead">
+          SimSpoof takes a route file and plays it as real movement on an iPhone
+          Simulator, an Android emulator, or a real iPhone — as if the phone
+          were actually travelling. Watch the dot move, control the speed, and
+          see your app react. No walking the route.
+        </p>
+        <div class="cta">
+          <a
+            class="btn primary"
+            href="https://github.com/ccioloca/simspoof-releases/releases"
+            >Download for Mac / Windows</a
+          >
+          <a class="btn ghost" href="#use">See how it works</a>
+        </div>
+      </div>
+    </div>
+
+    <section id="features">
+      <div class="wrap">
+        <h2>What you can do with it</h2>
+        <p class="sub">
+          Everything you need to drive a route and watch your app respond, in
+          one window.
+        </p>
+        <div class="grid">
+          <div class="card">
+            <div class="ic">▶</div>
+            <h3>Play a journey</h3>
+            <p>
+              Drop in a <code>.gpx</code> route, press Play, and the phone
+              starts moving along it. Speed up, slow down, or loop it.
+            </p>
+          </div>
+          <div class="card">
+            <div class="ic">⚏</div>
+            <h3>Drive several phones at once</h3>
+            <p>
+              Any mix of iPhone simulators, Android emulators, and a real iPhone
+              — one route plays on all of them together so you can compare.
+            </p>
+          </div>
+          <div class="card">
+            <div class="ic">✎</div>
+            <h3>Draw your own route</h3>
+            <p>
+              Click points on the map, type coordinates, or type an address.
+              Drag points, set per-leg speed and stop pauses, save for later.
+            </p>
+          </div>
+          <div class="card">
+            <div class="ic">▤</div>
+            <h3>Watch what your app sees</h3>
+            <p>
+              Live log streams next to the map: the phone's system logs and your
+              app's own debug messages, as the phone moves.
+            </p>
+          </div>
+          <div class="card">
+            <div class="ic">⇄</div>
+            <h3>Inspect network traffic</h3>
+            <p>
+              A Chrome-style Network tab shows your app's API requests and
+              responses — headers, payloads, timing — pulled from Metro.
+            </p>
+          </div>
+          <div class="card">
+            <div class="ic">◔</div>
+            <h3>Track performance</h3>
+            <p>
+              Live CPU and memory charts for the running app, per-process, down
+              to individual threads — a quick glance while you drive.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="start">
+      <div class="wrap">
+        <h2>Getting started</h2>
+        <p class="sub">
+          SimSpoof is a Mac app (Windows too, minus the iPhone-Simulator part).
+        </p>
+        <div class="split">
+          <div class="panel">
+            <h3>1 · Install</h3>
+            <ul>
+              <li>
+                Download the latest build from the
+                <a href="https://github.com/ccioloca/simspoof-releases/releases"
+                  >Releases page</a
+                >.
+              </li>
+              <li>
+                Open it. It <b>updates itself</b> when a new version ships.
+              </li>
+              <li>
+                Any running simulator, emulator, or connected iPhone shows up
+                automatically — and is selected for you.
+              </li>
+            </ul>
+          </div>
+          <div class="panel">
+            <h3>2 · Have a phone running</h3>
+            <ul>
+              <li>
+                <b>iPhone Simulator</b> — boot one from Xcode (or
+                Simulator.app).
+              </li>
+              <li><b>Android emulator</b> — start one from Android Studio.</li>
+              <li>
+                <b>Real iPhone</b> — plug it in with Developer Mode on; it
+                appears as another selectable phone.
+              </li>
+              <li>
+                To see your app's own debug logs, run it as a
+                <b>development build</b>.
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="use">
+      <div class="wrap">
+        <h2>How to use it</h2>
+        <p class="sub">Four steps from launch to watching your app react.</p>
+        <ol class="steps">
+          <li>
+            <h3>Pick your phones</h3>
+            <p>
+              Every simulator, emulator, or connected iPhone that's running
+              appears in the sidebar and is selected by default. Untick any you
+              don't want to drive.
+            </p>
+          </li>
+          <li>
+            <h3>Pick or draw a route</h3>
+            <p>
+              Load a <code>.gpx</code> from your library, import one, or draw a
+              new route on the map — click to add points, type an address to
+              jump there, drag points to adjust. Set speed per leg and a pause
+              at any stop, then save it with a name.
+            </p>
+          </li>
+          <li>
+            <h3>Press Play</h3>
+            <p>
+              SimSpoof walks the route point by point, telling each phone "you
+              are here" many times a second and moving smoothly between points
+              at your chosen speed. Pause points make it stop and wait, like a
+              real stop. Adjust the speed factor or loop it live.
+            </p>
+          </li>
+          <li>
+            <h3>Watch it react</h3>
+            <p>
+              The dot moves on the map with a live compass and lat/lon/speed
+              readout. Open the log &amp; network panel to see your app
+              receiving the new positions in real time.
+            </p>
+          </li>
+        </ol>
+        <div class="note" style="margin-top: 24px">
+          <b>Right-click the map</b> anywhere to copy that spot's
+          latitude/longitude — handy for building routes or checking a geofence.
+        </div>
+
+        <div class="shots">
+          <figure class="shot">
+            <img
+              src="screenshots/journey.jpg"
+              alt="SimSpoof playing a journey — moving dot on the map with a live compass and speed readout"
+              loading="lazy"
+            />
+            <figcaption>
+              Press Play and the phone moves along the route — the dot advances
+              live while the compass shows heading, lat/lon, speed, and segment.
+            </figcaption>
+          </figure>
+          <figure class="shot">
+            <img
+              src="screenshots/route-editor.jpg"
+              alt="SimSpoof route editor with numbered waypoints on the map"
+              loading="lazy"
+            />
+            <figcaption>
+              Draw a route on the map — numbered waypoints, live compass, and
+              the journey length. The active scenario is highlighted in the
+              library.
+            </figcaption>
+          </figure>
+          <figure class="shot">
+            <img
+              src="screenshots/point-editor.jpg"
+              alt="Per-point editor popup showing latitude, longitude, speed and pause"
+              loading="lazy"
+            />
+            <figcaption>
+              Click any point to edit its coordinates, set the leg speed and a
+              pause, or delete it.
+            </figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <section id="inspect">
+      <div class="wrap">
+        <h2>Logs &amp; Network inspector</h2>
+        <p class="sub">
+          The bottom panel is a full inspector. Hit <b>Start capture</b> and
+          pick a tab.
+        </p>
+        <div class="tabs">
+          <span class="tabchip">iOS</span>
+          <span class="tabchip">Android</span>
+          <span class="tabchip">Metro</span>
+          <span class="tabchip">SimSpoof</span>
+          <span class="tabchip">Network</span>
+          <span class="tabchip">Performance</span>
+        </div>
+
+        <div class="mock" aria-hidden="true">
+          <div class="mock-bar">
+            <span class="mock-btn">Stop capture</span>
+            <span class="mock-btn ghost">Clear</span>
+            <span class="mock-sep"></span>
+            <span class="mock-tab on">Metro</span>
+            <span class="mock-tab">iOS</span>
+            <span class="mock-tab">Network</span>
+            <span class="mock-filter">filter — use -term to exclude</span>
+          </div>
+          <div class="mock-log">
+            <div class="ml">
+              <span class="t">14:02:11</span><span class="src">Metro</span
+              ><span class="lv i"
+                >location update 51.5074, -0.1278 · 32 km/h</span
+              >
+            </div>
+            <div class="ml">
+              <span class="t">14:02:11</span><span class="src">Metro</span
+              ><span class="lv i">GET /trips/active → 200 (142 ms)</span>
+            </div>
+            <div class="ml">
+              <span class="t">14:02:12</span><span class="src">Metro</span
+              ><span class="lv d">geofence check: approaching stop #4</span>
+            </div>
+            <div class="ml">
+              <span class="t">14:02:12</span><span class="src">iOS</span
+              ><span class="lv i">CLLocationManager didUpdateLocations</span>
+            </div>
+            <div class="ml">
+              <span class="t">14:02:13</span><span class="src">Metro</span
+              ><span class="lv w">position stale by 1.4s — using last fix</span>
+            </div>
+            <div class="ml">
+              <span class="t">14:02:14</span><span class="src">Metro</span
+              ><span class="lv i">POST /checkin → 200 (203 ms)</span>
+            </div>
+            <div class="ml">
+              <span class="t">14:02:15</span><span class="src">Metro</span
+              ><span class="lv e"
+                >retry: network request timed out (attempt 2)</span
+              >
+            </div>
+          </div>
+          <span class="mock-cap"
+            >Illustrative — your own logs appear here live</span
+          >
+        </div>
+
+        <div class="split">
+          <div class="panel">
+            <h3>Logs</h3>
+            <ul>
+              <li>
+                Separate tabs for <b>iOS</b> system logs, <b>Android</b> logcat,
+                <b>Metro</b> (your app's console), and <b>SimSpoof</b>'s own
+                status messages.
+              </li>
+              <li>
+                Auto-detected log levels with color coding and level chips to
+                filter.
+              </li>
+              <li>
+                Search with live highlight. Type <code>-term</code> to exclude a
+                term.
+              </li>
+              <li>
+                Each line carries a local timestamp. Drag to resize the area.
+              </li>
+              <li>Clear button, or auto-clear on each new capture.</li>
+            </ul>
+          </div>
+          <div class="panel">
+            <h3>Network</h3>
+            <ul>
+              <li>
+                API requests and responses (and websockets) — the noise is
+                filtered out.
+              </li>
+              <li>
+                Chrome-style inspector: <b>Headers</b>, <b>Payload</b>,
+                <b>Preview</b>, <b>Response</b>, <b>Timing</b> tabs.
+              </li>
+              <li>Collapsible JSON, copy per tab, and text selection.</li>
+              <li>
+                Pulled from Metro's HTTP logs — no system proxy, so your Mac's
+                network stays untouched.
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="perf">
+      <div class="wrap">
+        <h2>Performance tab</h2>
+        <p class="sub">
+          A lightweight glance at what the running app costs — without attaching
+          a debugger.
+        </p>
+        <div class="split">
+          <div class="panel">
+            <h3>What it shows</h3>
+            <ul>
+              <li>Live <b>CPU %</b> and <b>memory</b> charts for the app.</li>
+              <li>Time ranges: <b>Live</b>, <b>5 min</b>, <b>30 min</b>.</li>
+              <li>
+                <b>Per-process</b> breakdown, sorted by CPU (biggest power draw
+                first).
+              </li>
+              <li>
+                Click a process to drill into PID, threads, CPU time, uptime,
+                memory, state — down to a <b>per-thread</b> table.
+              </li>
+            </ul>
+          </div>
+          <div class="panel">
+            <h3>What it isn't</h3>
+            <ul>
+              <li>
+                It's a quick glance, not a profiler. For call stacks, named
+                threads, leaks, and real energy impact, use
+                <b>Xcode Instruments</b> or the <b>Android Studio Profiler</b>.
+              </li>
+              <li>
+                CPU % is the power proxy — macOS doesn't expose per-process
+                wattage without elevated tools.
+              </li>
+              <li>
+                Simulator/host processes only (the app runs natively on the
+                Mac).
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="real">
+      <div class="wrap">
+        <h2>The real-iPhone catch</h2>
+        <p class="sub">Worth knowing before you trust a simulator result.</p>
+        <div class="split">
+          <div class="panel">
+            <h3>Simulator — convenient, quirky</h3>
+            <ul>
+              <li>
+                Some location libraries cache an old position and can look
+                "stuck" while standing still.
+              </li>
+              <li>
+                Stop-detection (geofences) can be flaky — the simulator doesn't
+                behave exactly like real GPS.
+              </li>
+            </ul>
+          </div>
+          <div class="panel">
+            <h3>Real iPhone — behaves correctly</h3>
+            <ul>
+              <li>Real GPS hardware, real behavior.</li>
+              <li>
+                SimSpoof drives it over USB or WiFi — it's just another phone
+                you select.
+              </li>
+              <li>
+                When something <b>has</b> to work (a driver checking into a
+                stop), test it here.
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="req">
+      <div class="wrap">
+        <h2>What you need on your Mac</h2>
+        <p class="sub">Only what matches the phones you want to drive.</p>
+        <div class="panel" style="padding: 8px 10px">
+          <table class="req">
+            <tr>
+              <td>iPhone Simulator</td>
+              <td>Xcode installed.</td>
+            </tr>
+            <tr>
+              <td>Android emulator</td>
+              <td>Android platform-tools (<code>adb</code>).</td>
+            </tr>
+            <tr>
+              <td>Real iPhone</td>
+              <td>
+                Phone in Developer Mode, the
+                <code>pymobiledevice3</code> helper, and a tunnel running to
+                reach it.
+              </td>
+            </tr>
+            <tr>
+              <td>App debug logs</td>
+              <td>The target app running as a development build.</td>
+            </tr>
+            <tr>
+              <td>Windows</td>
+              <td>
+                Android and real-iPhone support only — the iPhone-Simulator part
+                is Mac-only.
+              </td>
+            </tr>
+          </table>
+        </div>
+      </div>
+    </section>
+    <footer>
+      <div class="wrap">
+        SimSpoof — GPS simulation for location apps ·
+        <a href="https://github.com/ccioloca/simspoof-releases/releases"
+          >Download</a
+        >
+      </div>
+    </footer>
+  </body>
+</html>
